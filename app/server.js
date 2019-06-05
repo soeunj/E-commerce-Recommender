@@ -1,4 +1,5 @@
 const express = require('express');
+var session = require('express-session');
 const http = require('http');
 const bodyParser = require('body-parser');
 const router = require('./router');
@@ -12,8 +13,18 @@ let connection_string = '127.0.0.1:27017/ecommerce';
 // DB Setup
 mongoose.connect('mongodb://'+ connection_string);
 
+app.set('view engine', 'ejs');
+
+app.use(session({
+	secret: 'secret',
+	resave: true,
+	saveUninitialized: true
+}));
+app.use(bodyParser.urlencoded({extended:true}));
+app.use(express.static(__dirname + '/'));
 app.use(cors());
 app.use(bodyParser.json());
+
 router(app);
 
 // Server setup
