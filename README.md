@@ -19,7 +19,7 @@ mongod
 
 - Add user
 
-- Go to app directory and run this command:
+- Go to app directory run those commands:
 ```
 npm init
 ```
@@ -39,4 +39,6 @@ python api.py
 
 - Open webpage 'localhost:4000'. You will see login page and login using username and password you just created.
 
+## TODO
+- Fix recommendation api
 
