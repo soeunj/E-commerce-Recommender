@@ -69,7 +69,7 @@ html,body,h1,h2,h3,h4,h5 {font-family: "Raleway", sans-serif}
               </tr>
                 <% for(let i = 0; i < deficiency.length; i++) { %>
                   <% let len = deficiency.length-1; %>
-                  <tr><td><%=i+1%></td><td><input type="text" name="deficiency_<%=i%>" value="<%=deficiency[len-i][0]%>" style="border: none; border-color: transparent;" ></td><td><button class="w3-button w3-right w3-dark-grey">Shop</button></td></tr>
+                  <tr><td><%=i+1%></td><td><input type="text" name="deficiency_<%=i%>" value="<%=deficiency[i]%>" style="border: none; border-color: transparent;" ></td><td><button class="w3-button w3-right w3-dark-grey">Shop</button></td></tr>
               <% } %>
           </table>
         </div>
@@ -141,8 +141,9 @@ function w3_close() {
   mySidebar.style.display = "none";
   overlayBg.style.display = "none";
 }
-var label = "<%-label%>".split(',');
-var data = "<%-data%>".split(',');
+var diet_l = "<%-diet_l%>".split(',');
+var deficiency = "<%-deficiency-%>".split(',');
+var diet = "<%-diet%>".split(',');
 var order_odw = "<%-order_odw%>".split(',');
 var order_hour_of_day = "<%-order_hour_of_day%>".split(',');
 var reorder_department = "<%-reorder_department%>".split(',');
@@ -151,15 +152,17 @@ var reorder_aisle = "<%-reorder_aisle%>".split(',');
 var reorder_aisle_l = "<%-reorder_aisle_l%>".split(',');
 var reorder_diet = "<%-reorder_diet%>".split(',');
 var reorder_diet_l = "<%-reorder_diet_l%>".split(',');
-
+console.log(deficiency);
+console.log(diet_l);
+console.log(diet);
 // Pie Chart Example
 var ctx = document.getElementById("myPieChart");
 var myPieChart = new Chart(ctx, {
   type: 'pie',
   data: {
-    labels: label,
+    labels: diet_l,
     datasets: [{
-      data: data,
+      data: diet,
       backgroundColor: [
       '#4f372d', '#4f5b66','#173F5F', '#008744', '#ffa700', '#d62d20', '#20639B', '#E1C699'
         ]
@@ -215,7 +218,7 @@ var ctx = document.getElementById("department");
 var myBarChart = new Chart(ctx, {
   type: 'bar',
   data: {
-    labels: reorder_department_1,
+    labels: reorder_department_l,
     datasets: [{
       data: reorder_department,
       backgroundColor: '#ffa700'

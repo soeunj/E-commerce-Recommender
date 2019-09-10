@@ -1,90 +1,79 @@
-const Basket  = require('../models/basket');
+const Basket = require('../models/basket');
 const request = require('request');
+const fetch = require('node-fetch');
 
-exports.getDietAnalysis = function(req, res, next){
+exports.getDietAnalysis = async function (req, res, next) {
     var id = req.session.user_id;
-    Basket.aggregate([{$match:{user_id:Number(id)}},{$group:{_id:"$foodgroup", count:{$sum:1}}}], function(err, basket){
-        if (err) throw err;
-        var data = [], label = [], list_group =[];
-        var sum_num = 0;
-        var deficiency = {};
-        var foodgroup = {'carbohydrates':38, 'fat':1, 'proteins':12, 'vegetables and fruits':40, 'diary products and alternatives':8};
-        for(let i=0; i<basket.length; i++){
-            if(basket[i]._id != "others"){
-                data.push(basket[i].count);
-                label.push(basket[i]._id);
-                sum_num = sum_num + basket[i].count;
-                list_group.push(basket[i]._id);
-            }
-        }
-        for(let i=0; i<basket.length; i++){
-            var percentage = basket[i].count/sum_num*100;
-            if(basket[i]._id == 'carbohydrates' && percentage < 38){
-                deficiency['carbohydrates'] = 38-percentage;
-            }
-            else if(basket[i]._id == 'fat' && percentage < 1){
-                deficiency['fat']=1-percentage;
-            }
-            else if(basket[i]._id == 'proteins' && percentage < 12){
-                deficiency['proteins']= 12-percentage;
-            }
-            else if(basket[i]._id == 'vegetables and fruits' && percentage < 40){
-                deficiency['vegetables and fruits']=40-percentage;
-            }
-            else if(basket[i]._id == 'diary products and alternatives' && percentage < 8){
-                deficiency['diary products and alternatives']=8-percentage;
-            }
-        }
-        for(var key in foodgroup){
-            if(list_group.indexOf(key) == -1) {
-                deficiency[key] = foodgroup[key];
-            }       
-         }
-        var sortable = [];
-        for (var k in deficiency) {
-            sortable.push([k, deficiency[k]]);
-        }
+    try {
+        var data = await Promise.all([
+            fetch('http://localhost:5000/diet/' + String(id)).then((response) => response.json()),
+            fetch('http://localhost:5000/analysis/order_dow/' + String(id)).then((response) => response.json()),
+            fetch('http://localhost:5000/analysis/order_hour_of_day/' + String(id)).then((response) => response.json()),
+            fetch('http://localhost:5000/analysis/reorder_department/' + String(id)).then((response) => response.json()),
+            fetch('http://localhost:5000/analysis/reorder_aisle/' + String(id)).then((response) => response.json()),
+            fetch('http://localhost:5000/analysis/reorder_diet/' + String(id)).then((response) => response.json())
+        ]);
+        var deficiency = calDdeficiency(data[0]);
+        res.render('diet', {
+            username: req.session.username, diet: data[0]['data'], diet_l: data[0]['label'], deficiency: deficiency,
+            order_odw: data[1]['data'], order_hour_of_day: data[2]['data'], reorder_department: data[3]['data'], reorder_department_l: data[3]['label'], reorder_aisle: data[4]['data'], reorder_aisle_l: data[4]['label'], reorder_diet: data[5]['data'], reorder_diet_l: data[5]['label']
+        });
+    } catch (error) {
+        console.log(error);
+    }
+};
 
-        sortable.sort(function(a, b) {
+function calDdeficiency(data) {
+    var list_of_nutrition = ['carbohydrates', 'fat', 'proteins', 'vegetables and fruits', 'diary products and alternatives'];
+    var nutritions = {};
+    var diet_data = data['data'], diet_label = data['label'];
+    var sum = 0;
+    console.log(data);
+    for(let i=0; i<list_of_nutrition.length; i++){
+        if(diet_label.indexOf(list_of_nutrition[i]) == -1) {
+            nutritions[list_of_nutrition[i]] = -1;
+        }
+    }
+    console.log(nutritions);
+    for(let i=0 ;i<diet_label.length; i++){
+        if(list_of_nutrition.indexOf(diet_label[i]) != -1){
+            sum += diet_data[i];
+        }
+    }
+    for (let i = 0; i < diet_data.length; i++) {
+        if(list_of_nutrition.indexOf(diet_label[i]) == -1){
+            continue;
+        }
+        var percentage = diet_data[i] / sum * 100.0;
+        if (diet_label[i] == 'carbohydrates' && percentage < 38) {
+            nutritions['carbohydrates'] = 38.0 - percentage;
+        }
+        else if (diet_label[i] == 'fat' && percentage < 1) {
+            nutritions['fat'] = 1.0 - percentage;
+        }
+        else if (diet_label[i] == 'proteins' && percentage < 12) {
+            nutritions['proteins'] = 12.0 - percentage;
+        }
+        else if (diet_label[i] == 'vegetables and fruits' && percentage < 40) {
+            nutritions['vegetables and fruits'] = 40.0 - percentage;
+        }
+        else if (diet_label[i] == 'diary products and alternatives' && percentage < 8) {
+            nutritions['diary products and alternatives'] = 8.0 - percentage;
+        }
+    }
+    var sortable = [];
+    for (var k in nutritions) {
+        sortable.push([String(k), nutritions[k]]);
+    }
+
+    sortable.sort(function (a, b) {
         return a[1] - b[1];
-        });
-        
-        var order_odw = [], order_hour_of_day = [], reorder_department = [];
-        request('http://localhost:5000/analysis/'+String(id)+'/order_dow/_id', { json: true }, (err, res, body) => {
-            if (err) { return console.log(err); }
-            order_odw = body;
-        });
-
-        request('http://localhost:5000/analysis/'+String(id)+'/order_hour_of_day/_id', { json: true }, (err, res, body) => {
-            if (err) { return console.log(err); }
-            order_hour_of_day = body;
-        });
-
-        request('http://localhost:5000/analysis/reorder_department/'+String(id), { json: true }, (err, res, body) => {
-            if (err) { return console.log(err); }
-            reorder_department = body;
-        });
-
-        request('http://localhost:5000/analysis/reorder_aisle/'+String(id), { json: true }, (err, res, body) => {
-            if (err) { return console.log(err); }
-            reorder_aisle = body;
-        });
-
-        request('http://localhost:5000/analysis/reorder_diet/'+String(id)+'/diet', { json: true }, (err, res, body) => {
-            if (err) { return console.log(err); }
-            reorder_diet = body;
-        });
-        res.render('diet',{ username: req.session.username, data: data, label: label, deficiency: sortable, order_odw: order_odw['data'], order_hour_of_day:order_hour_of_day['data'], reorder_department: reorder_department['data'], reorder_department_l: reorder_department['label'], reorder_aisle: reorder_aisle['data'], reorder_aisle_l: reorder_aisle['label'], reorder_diet: reorder_diet['data'],  reorder_diet_l: reorder_diet['label']});
     });
-};
 
-//app.get('/dietanalysis/:id/:name', DietAnalysis.getListOfProductByDiet);
-exports.getListOfProductByDiet = function(req, res, next){
-    var id = req.session.user_id;
-    var name = req.params.name;
-    Basket.aggregate([{$match:{user_id:Number(id), foodgroup:name}}], function(err, basket){
-        if (err) throw err;
-        res.send(basket);
-        console.log(basket);
-    });
-};
+    deficiency = [];
+    for(let i=0; i<sortable.length; i++){
+        deficiency.push(sortable[i][0]);
+    }
+    console.log(deficiency);
+    return deficiency;
+}

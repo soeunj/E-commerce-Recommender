@@ -1,7 +1,6 @@
 const Main = require('./controllers/main');
 const Recommendation = require('./controllers/recommendation');
 const DietAnalysis = require('./controllers/diet_analysis');
-const History = require('./controllers/history');
 const Authentication = require('./controllers/authentication');
 
 

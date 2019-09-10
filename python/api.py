@@ -29,6 +29,7 @@ def diet(id):
     data = []
     label = []
     for u in online_users:
+        print(u)
         label.append(u['_id'])
         data.append(u['count'])
     result = {"data":data,"label":label}
@@ -37,7 +38,7 @@ def diet(id):
     return df
 
 @app.route('/analysis/order_hour_of_day/<id>', methods=['GET'])
-def analysis(id, name, order):
+def analysis_order_hour_of_day(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":"$order_hour_of_day", "count":{"$sum":1}}},{"$sort":{"_id":1}},{"$limit":25}]
     online_users = mongo.db.analysis.aggregate(pipeline)
     data = []
@@ -50,7 +51,7 @@ def analysis(id, name, order):
     return df
 
 @app.route('/analysis/order_dow/<id>', methods=['GET'])
-def analysis(id, name, order):
+def analysis_order_dow(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":"$order_dow", "count":{"$sum":1}}},{"$sort":{"_id":1}},{"$limit":25}]
     online_users = mongo.db.analysis.aggregate(pipeline)
     data = []
@@ -63,7 +64,7 @@ def analysis(id, name, order):
     return df
 
 @app.route('/analysis/reorder_department/<id>', methods=['GET'])
-def reordered(id, name):
+def reordered_department(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":"$department", "count":{"$sum":1}, "mean":{"$avg":"$reordered"}}},{"$sort":{"mean":-1}},{"$limit":20}]
     online_users = mongo.db.analysis.aggregate(pipeline)
     data = []
@@ -76,7 +77,7 @@ def reordered(id, name):
     return df
 
 @app.route('/analysis/reorder_aisle/<id>', methods=['GET'])
-def reordered(id, name):
+def reordered_aisle(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":"$aisle", "count":{"$sum":1}, "mean":{"$avg":"$reordered"}}},{"$sort":{"mean":-1}},{"$limit":20}]
     online_users = mongo.db.analysis.aggregate(pipeline)
     data = []
@@ -89,7 +90,7 @@ def reordered(id, name):
     return df
 
 @app.route('/analysis/reorder_diet/<id>', methods=['GET'])
-def reordered(id, name):
+def reordered_diet(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":"$foodgroup", "count":{"$sum":1}, "mean":{"$avg":"$reordered"}}},{"$sort":{"mean":-1}},{"$limit":20}]
     online_users = mongo.db.analysis.aggregate(pipeline)
     data = []
@@ -104,9 +105,9 @@ def reordered(id, name):
 @app.route('/analysis/associations/<id>', methods=['GET'])
 def associations(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":{"order_id":"$order_id","product_id":"$product_id"}, "count":{"$sum":1},"product_name":{"$first":"$product_name"}, "product_id":{"$first":"$product_id"},"order_id":{"$first":"$order_id"}}}]
-    mongo = mongo.db.association.aggregate(pipeline)
+    associations = mongo.db.association.aggregate(pipeline)
     results = []
-    for u in mongo:
+    for u in associations:
         results.append(u)
     data = pd.DataFrame(results)
     #preparting data for apriori algor
@@ -127,10 +128,10 @@ def associations(id):
 
 @app.route('/analysis/recommendation/<id>', methods=['GET'])
 def recommendation(id):
-    pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":{"order_id":"$order_id","product_id":"$product_id"}, "count":{"$sum":1},"product_name":{"$first":"$product_name"}, "product_id":{"$first":"$product_id"},"order_id":{"$first":"$order_id"}}}]
-    mongo = mongo.db.association.aggregate(pipeline)
+    pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":{"order_id":"$order_id","product_id":"$product_id"}, "count":{"$sum":1},"user_id":{"$first":"$user_id"},"product_name":{"$first":"$product_name"}, "product_id":{"$first":"$product_id"},"order_id":{"$first":"$order_id"}}}]
+    recommendation = mongo.db.association.aggregate(pipeline)
     results = []
-    for u in mongo:
+    for u in recommendation:
         results.append(u)
     data = pd.DataFrame(results)
     u = data.groupby(['user_id','product_name']).size().sort_values(ascending=False).unstack().fillna(0)
