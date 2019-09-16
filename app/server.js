@@ -18,6 +18,7 @@ app.set('view engine', 'ejs');
 app.use(session({
 	secret: 'secret',
 	resave: true,
+	rolling: true,
 	saveUninitialized: true
 }));
 app.use(bodyParser.urlencoded({extended:true}));
