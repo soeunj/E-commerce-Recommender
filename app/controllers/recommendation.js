@@ -1,16 +1,16 @@
 const request = require('request');
-
-exports.getRecommendation = function(req, res, next){
+const fetch = require('node-fetch');
+exports.getRecommendation = async function (req, res, next) {
     var id = req.session.user_id;
-    var association = [], recommendation = [];
-    request('http://localhost:5000/analysis/association/'+String(id), { json: true }, (err, res, body) => {
-        if (err) { return console.log(err); }
-        association = body;
-    });
-    request('http://localhost:5000/analysis/recommendation/'+String(id), { json: true }, (err, res, body) => {
-        if (err) { return console.log(err); }
-        recommendation = body;
-    });
-    res.render('recommendation',{ username: req.session.username, recommendation : recommendation, association: association });
+    try {
+        var data = await Promise.all([
+            fetch('http://localhost:5000/analysis/recommendation/' + String(id)).then((response) => response.json())
+        ]);
+        console.log(data[0]['product']);
+        res.render('recommendation', { username: req.session.username, product:data[0]['product'], p_r:data[0]['p_r'], association:data[0]['association'] });
+    }
+    catch (error) {
+        console.log(error);
+    }
 
 };

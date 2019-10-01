@@ -103,13 +103,18 @@ def reordered_diet(id):
     return df
 
 @app.route('/analysis/associations/<id>', methods=['GET'])
+
 def associations(id):
     pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":{"order_id":"$order_id","product_id":"$product_id"}, "count":{"$sum":1},"product_name":{"$first":"$product_name"}, "product_id":{"$first":"$product_id"},"order_id":{"$first":"$order_id"}}}]
-    associations = mongo.db.association.aggregate(pipeline)
+    associations = mongo.db.analysis.aggregate(pipeline)
     results = []
     for u in associations:
         results.append(u)
+    result = json.dumps(results)
+    return result
+
     data = pd.DataFrame(results)
+    print(data)
     #preparting data for apriori algor
     basket = data.pivot(index='order_id', columns='product_id', values='count')
     basket = basket.fillna(0)
@@ -126,11 +131,33 @@ def associations(id):
     df = save_data.to_json()
     return df
 
+
 @app.route('/analysis/recommendation/<id>', methods=['GET'])
 def recommendation(id):
-    pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":{"order_id":"$order_id","product_id":"$product_id"}, "count":{"$sum":1},"user_id":{"$first":"$user_id"},"product_name":{"$first":"$product_name"}, "product_id":{"$first":"$product_id"},"order_id":{"$first":"$order_id"}}}]
+
+    pipeline = [{"$match":{"user_id":int(id)}},{"$sort":{"antecedent support":-1}}]
     recommendation = mongo.db.association.aggregate(pipeline)
     results = []
+    product = []
+    association = []
+    rate = []
+    p_r = {}
+    for u in recommendation:
+        key = list(u.keys())
+        product.append(u[key[2]])
+        association.append(u[key[3]])
+        #rate.append(round(u[key[4]],3))
+        if u[key[2]] not in p_r.keys():
+            p_r[u[key[2]]] = round(u[key[4]],3)
+    print(p_r)
+    results = {"product":product, "association":association, "p_r":p_r}#"rate":rate
+    #results.append({"antecedents":product, "rate": rate, "association":association})
+    result = json.dumps(results)
+    print(result)
+    '''
+    results = []
+    pipeline = [{"$match":{"user_id":int(id)}},{"$group":{"_id":{"order_id":"$order_id","product_id":"$product_id"}, "count":{"$sum":1},"user_id":{"$first":"$user_id"},"product_name":{"$first":"$product_name"}, "product_id":{"$first":"$product_id"},"order_id":{"$first":"$order_id"}}}]
+    recommendation = mongo.db.analysis.aggregate(pipeline)
     for u in recommendation:
         results.append(u)
     data = pd.DataFrame(results)
@@ -143,6 +170,8 @@ def recommendation(id):
     save_data = recommendations.sort_values(ascending=False)[:11]
 
     df = save_data.to_json()
-    return df
+'''
+    return result
+    #return df
 
 app.run()
